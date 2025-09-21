@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>US Senate Tenure Visualization</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: #f0f2f5;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 30px;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .input-section {
+            margin-bottom: 40px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .input-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        label {
+            font-size: 20px;
+            color: #555;
+            font-weight: 500;
+        }
+
+        input[type="date"] {
+            padding: 10px 15px;
+            font-size: 18px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        input[type="date"]:focus {
+            border-color: #4CAF50;
+        }
+
+        .update-btn {
+            padding: 10px 20px;
+            font-size: 16px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .update-btn:hover {
+            background: #45a049;
+        }
+
+        .results {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .results.active {
+            display: block;
+        }
+
+        .results h2 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .results p {
+            font-size: 24px;
+            color: #555;
+            line-height: 1.6;
+        }
+
+        .results .highlight {
+            color: #2196F3;
+            font-weight: bold;
+            font-size: 32px;
+        }
+
+        .visualization {
+            margin-top: 30px;
+        }
+
+        .viz-title {
+            text-align: center;
+            font-size: 24px;
+            color: #333;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+
+        .senate-dots {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            margin: 40px auto;
+            max-width: 800px;
+        }
+
+        .party-section {
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            gap: 8px;
+            padding: 20px;
+            position: relative;
+        }
+
+        .dot {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .dot:hover {
+            transform: scale(1.3);
+            z-index: 10;
+        }
+
+        .dot.democrat {
+            background: #2196F3;
+        }
+
+        .dot.republican {
+            background: #f44336;
+        }
+
+        .dot.independent {
+            background: #9C27B0;
+        }
+
+        .dot.longer-tenure {
+            box-shadow: 0 0 0 3px rgba(255, 215, 0, 0.6);
+        }
+
+        .center-number {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 48px;
+            font-weight: bold;
+            color: #333;
+            background: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            z-index: 5;
+        }
+
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 30px;
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .legend-dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .stat-card {
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 32px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .democrat-stat { color: #2196F3; }
+        .republican-stat { color: #f44336; }
+        .independent-stat { color: #9C27B0; }
+
+        .tooltip {
+            position: absolute;
+            background: #333;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 14px;
+            pointer-events: none;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.3s;
+            white-space: nowrap;
+        }
+
+        .tooltip.active {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏛️ US Senate Tenure Visualization</h1>
+        
+        <div class="input-section">
+            <div class="input-group">
+                <label for="dateInput">Enter Date:</label>
+                <input type="date" id="dateInput" value="2004-04-12">
+            </div>
+            <button class="update-btn" onclick="updateVisualization()">Update Visualization</button>
+        </div>
+
+        <div class="results" id="results">
+            <h2>You entered: <span id="enteredDate"></span></h2>
+            <p>There are <span class="highlight" id="senatorCount">0</span> Senators who have served longer than that date.</p>
+        </div>
+
+        <div class="visualization">
+            <div class="viz-title">Current US Senate Composition</div>
+            <div class="senate-dots" id="senateDots">
+                <div class="center-number">100</div>
+            </div>
+            
+            <div class="stats" id="stats"></div>
+            
+            <div class="legend">
+                <div class="legend-item">
+                    <div class="legend-dot" style="background: #2196F3;"></div>
+                    <span>Democrat</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot" style="background: #f44336;"></div>
+                    <span>Republican</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot" style="background: #9C27B0;"></div>
+                    <span>Independent</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot" style="background: #fff; border: 2px solid #FFD700; box-shadow: 0 0 0 2px rgba(255, 215, 0, 0.4);"></div>
+                    <span>Served longer than date</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="tooltip" id="tooltip"></div>
+
+    <script>
+        // Current US Senators data (as of early 2024)
+        // This is a sample dataset - in production, you would fetch this from an API or update regularly
+        const senators = [
+            // Democrats
+            {name: "Jon Ossoff", state: "GA", party: "Democrat", assumedOffice: "2021-01-20"},
+            {name: "Raphael Warnock", state: "GA", party: "Democrat", assumedOffice: "2021-01-20"},
+            {name: "Mark Kelly", state: "AZ", party: "Democrat", assumedOffice: "2020-12-02"},
+            {name: "John Hickenlooper", state: "CO", party: "Democrat", assumedOffice: "2021-01-03"},
+            {name: "Alex Padilla", state: "CA", party: "Democrat", assumedOffice: "2021-01-20"},
+            {name: "Ben Ray Luján", state: "NM", party: "Democrat", assumedOffice: "2021-01-03"},
+            {name: "Cory Booker", state: "NJ", party: "Democrat", assumedOffice: "2013-10-31"},
+            {name: "Tammy Baldwin", state: "WI", party: "Democrat", assumedOffice: "2013-01-03"},
+            {name: "Chris Murphy", state: "CT", party: "Democrat", assumedOffice: "2013-01-03"},
+            {name: "Mazie Hirono", state: "HI", party: "Democrat", assumedOffice: "2013-01-03"},
+            {name: "Martin Heinrich", state: "NM", party: "Democrat", assumedOffice: "2013-01-03"},
+            {name: "Tim Kaine", state: "VA", party: "Democrat", assumedOffice: "2013-01-03"},
+            {name: "Elizabeth Warren", state: "MA", party: "Democrat", assumedOffice: "2013-01-03"},
+            {name: "Tammy Duckworth", state: "IL", party: "Democrat", assumedOffice: "2017-01-03"},
+            {name: "Kamala Harris", state: "CA", party: "Democrat", assumedOffice: "2017-01-03"},
+            {name: "Catherine Cortez Masto", state: "NV", party: "Democrat", assumedOffice: "2017-01-03"},
+            {name: "Maggie Hassan", state: "NH", party: "Democrat", assumedOffice: "2017-01-03"},
+            {name: "Chris Van Hollen", state: "MD", party: "Democrat", assumedOffice: "2017-01-03"},
+            {name: "Tina Smith", state: "MN", party: "Democrat", assumedOffice: "2018-01-03"},
+            {name: "Doug Jones", state: "AL", party: "Democrat", assumedOffice: "2018-01-03"},
+            {name: "Kyrsten Sinema", state: "AZ", party: "Independent", assumedOffice: "2019-01-03"},
+            {name: "Jacky Rosen", state: "NV", party: "Democrat", assumedOffice: "2019-01-03"},
+            {name: "Bob Casey Jr.", state: "PA", party: "Democrat", assumedOffice: "2007-01-03"},
+            {name: "Amy Klobuchar", state: "MN", party: "Democrat", assumedOffice: "2007-01-03"},
+            {name: "Jon Tester", state: "MT", party: "Democrat", assumedOffice: "2007-01-03"},
+            {name: "Sherrod Brown", state: "OH", party: "Democrat", assumedOffice: "2007-01-03"},
+            {name: "Sheldon Whitehouse", state: "RI", party: "Democrat", assumedOffice: "2007-01-03"},
+            {name: "Ben Cardin", state: "MD", party: "Democrat", assumedOffice: "2007-01-03"},
+            {name: "Bob Menendez", state: "NJ", party: "Democrat", assumedOffice: "2006-01-18"},
+            {name: "Maria Cantwell", state: "WA", party: "Democrat", assumedOffice: "2001-01-03"},
+            {name: "Tom Carper", state: "DE", party: "Democrat", assumedOffice: "2001-01-03"},
+            {name: "Debbie Stabenow", state: "MI", party: "Democrat", assumedOffice: "2001-01-03"},
+            {name: "Mark Warner", state: "VA", party: "Democrat", assumedOffice: "2009-01-03"},
+            {name: "Jeff Merkley", state: "OR", party: "Democrat", assumedOffice: "2009-01-03"},
+            {name: "Michael Bennet", state: "CO", party: "Democrat", assumedOffice: "2009-01-22"},
+            {name: "Kirsten Gillibrand", state: "NY", party: "Democrat", assumedOffice: "2009-01-26"},
+            {name: "Joe Manchin", state: "WV", party: "Democrat", assumedOffice: "2010-11-15"},
+            {name: "Chris Coons", state: "DE", party: "Democrat", assumedOffice: "2010-11-15"},
+            {name: "Richard Blumenthal", state: "CT", party: "Democrat", assumedOffice: "2011-01-03"},
+            {name: "Brian Schatz", state: "HI", party: "Democrat", assumedOffice: "2012-12-27"},
+            {name: "Angus King", state: "ME", party: "Independent", assumedOffice: "2013-01-03"},
+            {name: "Ed Markey", state: "MA", party: "Democrat", assumedOffice: "2013-07-16"},
+            {name: "Gary Peters", state: "MI", party: "Democrat", assumedOffice: "2015-01-03"},
+            {name: "Chuck Schumer", state: "NY", party: "Democrat", assumedOffice: "1999-01-03"},
+            {name: "Dick Durbin", state: "IL", party: "Democrat", assumedOffice: "1997-01-03"},
+            {name: "Jack Reed", state: "RI", party: "Democrat", assumedOffice: "1997-01-03"},
+            {name: "Ron Wyden", state: "OR", party: "Democrat", assumedOffice: "1996-02-06"},
+            {name: "Patty Murray", state: "WA", party: "Democrat", assumedOffice: "1993-01-03"},
+            {name: "Bernie Sanders", state: "VT", party: "Independent", assumedOffice: "2007-01-03"},
+            
+            // Republicans
+            {name: "Tommy Tuberville", state: "AL", party: "Republican", assumedOffice: "2021-01-03"},
+            {name: "Bill Hagerty", state: "TN", party: "Republican", assumedOffice: "2021-01-03"},
+            {name: "Roger Marshall", state: "KS", party: "Republican", assumedOffice: "2021-01-03"},
+            {name: "Cynthia Lummis", state: "WY", party: "Republican", assumedOffice: "2021-01-03"},
+            {name: "Rick Scott", state: "FL", party: "Republican", assumedOffice: "2019-01-03"},
+            {name: "Mike Braun", state: "IN", party: "Republican", assumedOffice: "2019-01-03"},
+            {name: "Josh Hawley", state: "MO", party: "Republican", assumedOffice: "2019-01-03"},
+            {name: "Mitt Romney", state: "UT", party: "Republican", assumedOffice: "2019-01-03"},
+            {name: "Kevin Cramer", state: "ND", party: "Republican", assumedOffice: "2019-01-03"},
+            {name: "Marsha Blackburn", state: "TN", party: "Republican", assumedOffice: "2019-01-03"},
+            {name: "Cindy Hyde-Smith", state: "MS", party: "Republican", assumedOffice: "2018-04-09"},
+            {name: "John Kennedy", state: "LA", party: "Republican", assumedOffice: "2017-01-03"},
+            {name: "Todd Young", state: "IN", party: "Republican", assumedOffice: "2017-01-03"},
+            {name: "Ben Sasse", state: "NE", party: "Republican", assumedOffice: "2015-01-03"},
+            {name: "Dan Sullivan", state: "AK", party: "Republican", assumedOffice: "2015-01-03"},
+            {name: "Tom Cotton", state: "AR", party: "Republican", assumedOffice: "2015-01-03"},
+            {name: "Steve Daines", state: "MT", party: "Republican", assumedOffice: "2015-01-03"},
+            {name: "Mike Rounds", state: "SD", party: "Republican", assumedOffice: "2015-01-03"},
+            {name: "Joni Ernst", state: "IA", party: "Republican", assumedOffice: "2015-01-03"},
+            {name: "Thom Tillis", state: "NC", party: "Republican", assumedOffice: "2015-01-03"},
+            {name: "Bill Cassidy", state: "LA", party: "Republican", assumedOffice: "2015-01-03"},
+            {name: "James Lankford", state: "OK", party: "Republican", assumedOffice: "2015-01-03"},
+            {name: "Shelley Moore Capito", state: "WV", party: "Republican", assumedOffice: "2015-01-03"},
+            {name: "Ted Cruz", state: "TX", party: "Republican", assumedOffice: "2013-01-03"},
+            {name: "Deb Fischer", state: "NE", party: "Republican", assumedOffice: "2013-01-03"},
+            {name: "Dean Heller", state: "NV", party: "Republican", assumedOffice: "2011-05-09"},
+            {name: "Marco Rubio", state: "FL", party: "Republican", assumedOffice: "2011-01-03"},
+            {name: "Rand Paul", state: "KY", party: "Republican", assumedOffice: "2011-01-03"},
+            {name: "Mike Lee", state: "UT", party: "Republican", assumedOffice: "2011-01-03"},
+            {name: "Ron Johnson", state: "WI", party: "Republican", assumedOffice: "2011-01-03"},
+            {name: "Rob Portman", state: "OH", party: "Republican", assumedOffice: "2011-01-03"},
+            {name: "Pat Toomey", state: "PA", party: "Republican", assumedOffice: "2011-01-03"},
+            {name: "John Hoeven", state: "ND", party: "Republican", assumedOffice: "2011-01-03"},
+            {name: "John Boozman", state: "AR", party: "Republican", assumedOffice: "2011-01-03"},
+            {name: "Jerry Moran", state: "KS", party: "Republican", assumedOffice: "2011-01-03"},
+            {name: "Tim Scott", state: "SC", party: "Republican", assumedOffice: "2013-01-02"},
+            {name: "Roger Wicker", state: "MS", party: "Republican", assumedOffice: "2007-12-31"},
+            {name: "John Barrasso", state: "WY", party: "Republican", assumedOffice: "2007-06-22"},
+            {name: "John Thune", state: "SD", party: "Republican", assumedOffice: "2005-01-03"},
+            {name: "Richard Burr", state: "NC", party: "Republican", assumedOffice: "2005-01-03"},
+            {name: "Lindsey Graham", state: "SC", party: "Republican", assumedOffice: "2003-01-03"},
+            {name: "John Cornyn", state: "TX", party: "Republican", assumedOffice: "2002-12-02"},
+            {name: "Lisa Murkowski", state: "AK", party: "Republican", assumedOffice: "2002-12-20"},
+            {name: "Susan Collins", state: "ME", party: "Republican", assumedOffice: "1997-01-03"},
+            {name: "Mike Crapo", state: "ID", party: "Republican", assumedOffice: "1999-01-03"},
+            {name: "Jim Inhofe", state: "OK", party: "Republican", assumedOffice: "1994-11-16"},
+            {name: "Mitch McConnell", state: "KY", party: "Republican", assumedOffice: "1985-01-03"},
+            {name: "Chuck Grassley", state: "IA", party: "Republican", assumedOffice: "1981-01-03"},
+            {name: "Jim Risch", state: "ID", party: "Republican", assumedOffice: "2009-01-03"},
+        ];
+
+        let tooltip = document.getElementById('tooltip');
+
+        function createVisualization() {
+            const senateDots = document.getElementById('senateDots');
+            senateDots.innerHTML = '<div class="center-number">100</div>';
+            
+            // Sort senators by party
+            const democrats = senators.filter(s => s.party === 'Democrat');
+            const republicans = senators.filter(s => s.party === 'Republican');
+            const independents = senators.filter(s => s.party === 'Independent');
+            
+            // Create left section (Democrats and Independents)
+            const leftSection = document.createElement('div');
+            leftSection.className = 'party-section';
+            
+            [...democrats, ...independents].forEach(senator => {
+                const dot = createDot(senator);
+                leftSection.appendChild(dot);
+            });
+            
+            // Create right section (Republicans)
+            const rightSection = document.createElement('div');
+            rightSection.className = 'party-section';
+            
+            republicans.forEach(senator => {
+                const dot = createDot(senator);
+                rightSection.appendChild(dot);
+            });
+            
+            senateDots.appendChild(leftSection);
+            senateDots.appendChild(rightSection);
+            
+            updateStats(democrats.length, republicans.length, independents.length);
+        }
+
+        function createDot(senator) {
+            const dot = document.createElement('div');
+            dot.className = `dot ${senator.party.toLowerCase()}`;
+            dot.dataset.senator = JSON.stringify(senator);
+            
+            dot.addEventListener('mouseenter', (e) => {
+                const rect = e.target.getBoundingClientRect();
+                tooltip.textContent = `${senator.name} (${senator.state}) - Since ${senator.assumedOffice}`;
+                tooltip.style.left = rect.left + rect.width/2 + 'px';
+                tooltip.style.top = rect.top - 35 + 'px';
+                tooltip.style.transform = 'translateX(-50%)';
+                tooltip.classList.add('active');
+            });
+            
+            dot.addEventListener('mouseleave', () => {
+                tooltip.classList.remove('active');
+            });
+            
+            return dot;
+        }
+
+        function updateStats(dems, reps, inds) {
+            const stats = document.getElementById('stats');
+            stats.innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-number democrat-stat">${dems}</div>
+                    <div class="stat-label">Democrats</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number republican-stat">${reps}</div>
+                    <div class="stat-label">Republicans</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number independent-stat">${inds}</div>
+                    <div class="stat-label">Independents</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${dems + reps + inds}</div>
+                    <div class="stat-label">Total Senators</div>
+                </div>
+            `;
+        }
+
+        function updateVisualization() {
+            const dateInput = document.getElementById('dateInput').value;
+            if (!dateInput) {
+                alert('Please select a date');
+                return;
+            }
+            
+            const selectedDate = new Date(dateInput);
+            const formattedDate = selectedDate.toLocaleDateString('en-US', { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            });
+            
+            // Count senators who have served longer than the selected date
+            const longerServing = senators.filter(senator => {
+                const assumedDate = new Date(senator.assumedOffice);
+                return assumedDate < selectedDate;
+            });
+            
+            // Update results
+            document.getElementById('enteredDate').textContent = formattedDate;
+            document.getElementById('senatorCount').textContent = longerServing.length;
+            document.getElementById('results').classList.add('active');
+            
+            // Update visualization - highlight senators with longer tenure
+            const dots = document.querySelectorAll('.dot');
+            dots.forEach(dot => {
+                const senator = JSON.parse(dot.dataset.senator);
+                const assumedDate = new Date(senator.assumedOffice);
+                
+                if (assumedDate < selectedDate) {
+                    dot.classList.add('longer-tenure');
+                } else {
+                    dot.classList.remove('longer-tenure');
+                }
+            });
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            createVisualization();
+            // Auto-update with default date
+            updateVisualization();
+        });
+
+        // Allow Enter key to update
+        document.getElementById('dateInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                updateVisualization();
+            }
+        });
+    </script>
+</body>
+</html>
